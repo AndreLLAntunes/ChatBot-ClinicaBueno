@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Clínica • Assistente</title>
+<style>
+  /* ====== STYLES (compact, responsivo e acessível) ====== */
+  :root{
+    --bg:#0b1220; --card:#0f1740; --muted:#9fb0c6;
+    --accent:#48c78e; --accent-2:#2ea56c; --bubble-user:#4060ff;
+    --bubble-bot:#15203f; --glass: rgba(255,255,255,.04);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%; margin:0; background:linear-gradient(180deg,#07102a 0%,#071527 60%); color:#eaf4ff}
+  .wrap{max-width:980px;margin:28px auto;padding:18px}
+  
+  /* CÓDIGO CORRIGIDO AQUI */
+  /* Scrollbar - Apenas para navegadores Webkit (Chrome, Safari, Edge, etc.) */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: linear-gradient(180deg,#07102a 0%,#071527 60%);
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--muted);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #c4d0e2; /* Cinza mais claro no hover */
+  }
+  /* FIM DO CÓDIGO CORRIGIDO */
+
+  header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--card);
+    box-shadow: 0 8px 30px rgba(2,6,23,.6);
+    margin-bottom: 14px;
+  }
+  .brand{display:flex;gap:12px;align-items:center}
+  .logo{width:48px;height:48px;border-radius:10px;background:#0c254a;display:grid;place-items:center;font-size:22px}
+  h1{margin:0;font-size:18px}
+  .subtitle{margin:0;color:var(--muted);font-size:13px}
+  
+  .main{
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 16px;
+  }
+  @media(max-width:900px){.main{grid-template-columns:1fr}}
+  
+  .chatcard{
+    background: linear-gradient(180deg, rgba(255,255,255,.02), transparent);
+    border-radius: 12px;
+    padding: 12px;
+    height: 60vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .chat-container{
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    border-radius: 8px;
+    scroll-behavior: smooth; /* Adicionado para rolagem suave */
+  }
+  .log{
+    /* Removido a estilização de scroll do log, agora está no container */
+  }
+
+  .composer{display:flex;gap:8px;padding-top:8px}
+  input[type="text"]{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.25);color:inherit}
+  button.btn{background:var(--accent);border:none;padding:10px 12px;border-radius:10px;color:#042026;font-weight:700;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,.06);color:var(--muted);padding:8px 10px;border-radius:10px}
+  .quick{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+  .chip{background:transparent;border:1px solid rgba(255,255,255,.06);padding:8px 10px;border-radius:999px;cursor:pointer;color:white;}
+  .chip:hover { color: white; border-color: var(--accent); }
+  
+  /* CÓDIGO NOVO: Estilização do botão clicado */
+  .chip.clicked {
+    background: var(--accent);
+    color: #042026;
+    border-color: var(--accent);
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+  
+  /* CÓDIGO NOVO: Estilização do indicador de digitação */
+  .typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-style: italic;
+    color: var(--muted);
+  }
+  .typing-indicator span {
+    width: 6px;
+    height: 6px;
+    background-color: var(--muted);
+    border-radius: 50%;
+    animation: typing 1s infinite;
+  }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+  
+  @keyframes typing {
+    0%, 100% { transform: translateY(0); opacity: 0.3; }
+    50% { transform: translateY(-4px); opacity: 1; }
+  }
+  
+  .msg{display:flex;gap:10px;margin:8px 0;align-items:flex-end}
+  .msg.bot{justify-content:flex-start}
+  .msg.user{justify-content:flex-end}
+  .bubble{max-width:70%;padding:10px 12px;border-radius:12px;background:var(--bubble-bot);box-shadow:0 6px 18px rgba(0,0,0,.4)}
+  .msg.user .bubble{background:var(--bubble-user);color:#fff}
+  .meta{font-size:12px;color:var(--muted);margin-top:8px}
+  /* SIDE PANEL */
+  .panel{background:var(--card);padding:12px;border-radius:12px;min-height:60vh}
+  .panel h3{margin:0 0 8px 0}
+  .field{margin-bottom:8px}
+  .list{max-height:320px;overflow:auto;border-radius:8px;padding:6px;background:linear-gradient(180deg, rgba(255,255,255,.01), transparent)}
+  .appt{border-radius:8px;padding:8px;margin-bottom:6px;background:rgba(255,255,255,.02);display:flex;justify-content:space-between;gap:8px}
+  small.note{color:var(--muted);display:block;margin-top:4px}
+  .danger{background:#ff6b6b;color:#121212;padding:6px 10px;border-radius:8px;border:none}
+  /* compact icons */
+  .muted{color:var(--muted);font-size:13px}
+  footer.info{margin-top:10px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap" role="application" aria-label="Assistente da Clínica">
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden="true">🏥</div>
+      <div>
+        <h1>Clínica Saúde+ • Assistente</h1>
+        <p class="subtitle">Agendamentos, lembretes e suporte — rápido e amigável</p>
+      </div>
+    </div>
+    <div>
+      <button id="reset" class="ghost" title="Reiniciar conversa">Reiniciar</button>
+      <button id="exportAll" class="ghost" title="Exportar agendamentos .ics">Exportar .ics</button>
+    </div>
+  </header>
+
+  <div class="main" role="main">
+    <section class="chatcard" aria-label="Chat">
+      <div class="chat-container">
+        <div id="log" class="log" role="log" aria-live="polite"></div>
+        <div id="quick" class="quick" aria-hidden="false"></div>
+        <div id="typingIndicator" class="typing-indicator" style="display:none">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+
+      <form id="composer" class="composer" autocomplete="off" aria-label="Enviar mensagem">
+        <input id="input" type="text" placeholder="Selecione uma opção..." aria-label="Mensagem">
+        <button class="btn" type="submit">Enviar</button>
+      </form>
+
+      <div class="meta" id="meta">Dica: escreva "menu" para voltar às opções.</div>
+    </section>
+
+    <aside class="panel" aria-label="Painel lateral">
+      <h3>Agendamentos salvos</h3>
+      <div class="list" id="apptsList" aria-live="polite"></div>
+
+      <div style="margin-top:10px">
+        <h4>Configurações rápidas</h4>
+        <div class="field">
+          <label class="muted">Horário expediente (dias úteis)</label>
+          <div class="muted">09:00 - 19:00</div>
+        </div>
+        <div class="field">
+          <label class="muted">Sábado</label>
+          <div class="muted">08:00 - 12:00</div>
+        </div>
+      <div style="margin-top:12px">
+        <h4>Fila humana</h4>
+        <div class="muted" id="queueStatus">Nenhuma pessoa na fila</div>
+        <button id="joinQueue" class="ghost" style="margin-top:8px">Entrar na fila</button>
+      </div>
+
+      <footer class="info" style="margin-top:12px">Versão demo • Sem integração externa. Posso adaptar para Google Calendar, SMS ou WhatsApp.</footer>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+<script>
+const log = document.getElementById('log');
+const quick = document.getElementById('quick');
+const composer = document.getElementById('composer');
+const input = document.getElementById('input');
+const resetBtn = document.getElementById('reset');
+const apptsList = document.getElementById('apptsList');
+const exportAll = document.getElementById('exportAll');
+const joinQueueBtn = document.getElementById('joinQueue');
+const queueStatus = document.getElementById('queueStatus');
+const typingIndicator = document.getElementById('typingIndicator');
+
+const STATE = {
+  step: 'welcome',
+  awaiting: null,
+  ctx: { name:null, phone:null, type:null, specialty:null, doctor:null, dateISO:null, time:null },
+  reminders: {},
+  queue: []
+};
+
+/* ====== Configuráveis ====== */
+const CONFIG = {
+  work: { start:'09:00', end:'19:00' },
+  saturday: { start:'08:00', end:'12:00' },
+  slotMinutes: 30,
+  futureDays: 14,
+  // exemplo de feriados (YYYY-MM-DD)
+  holidays: [
+    '2025-09-07',
+    '2025-10-12',
+    '2025-11-02',
+    '2025-11-15',
+    '2025-11-20',
+    '2025-12-25',
+  ]
+};
+
+/* ====== Utilitários ====== */
+function now(){ return new Date(); }
+function sanitize(s){ return String(s || '').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;" }[m])); }
+function addBot(text){ appendMsg('bot', text); }
+function addUser(text){ appendMsg('user', text); }
+function appendMsg(kind, text){
+  const el = document.createElement('div'); el.className = 'msg ' + (kind==='bot'?'bot':'user');
+  const bubble = document.createElement('div'); bubble.className = 'bubble';
+  bubble.innerHTML = sanitize(text).replace(/\n/g,'<br>');
+  el.appendChild(bubble); log.appendChild(el); log.scrollTop = log.scrollHeight;
+}
+
+// CÓDIGO NOVO: Função para mostrar o indicador de digitação
+function showTypingIndicator() {
+  typingIndicator.style.display = 'flex';
+  log.scrollTop = log.scrollHeight;
+}
+// CÓDIGO NOVO: Função para esconder o indicador de digitação
+function hideTypingIndicator() {
+  typingIndicator.style.display = 'none';
+}
+
+// NOVO: Adiciona uma pausa antes da resposta do bot e mostra indicador
+function respondWithDelay(text) {
+  showTypingIndicator();
+  setTimeout(() => {
+    hideTypingIndicator();
+    addBot(text);
+    input.focus();
+  }, 2000); // 2 segundos de pausa
+}
+
+// CÓDIGO NOVO: Atualiza o placeholder do input
+function updatePlaceholder(text) {
+  input.placeholder = text;
+}
+
+/* ====== Storage de agendamentos ====== */
+function loadAppts(){ try{ return JSON.parse(localStorage.getItem('clinic_appts')||'[]'); }catch(e){ return []; } }
+function saveAppts(list){ localStorage.setItem('clinic_appts', JSON.stringify(list)); renderAppts(); }
+function newId(){ return 'a-'+Math.random().toString(36).slice(2,9); }
+
+/* ====== Listagem lateral ====== */
+function renderAppts(){
+  const list = loadAppts();
+  apptsList.innerHTML = '';
+  if(!list.length){ apptsList.innerHTML = '<div class="muted">Nenhum agendamento</div>'; return; }
+  list.sort((a,b)=> new Date(a.dateISO+'T'+a.time.split(' - ')[0]+':00') - new Date(b.dateISO+'T'+b.time.split(' - ')[0]+':00'));
+  list.forEach(a=>{
+    const d = document.createElement('div'); d.className='appt';
+    d.innerHTML = `<div>
+      <strong>${sanitize(a.name)}</strong><div class="muted">${sanitize(a.specialty)} • ${a.dateISO} • ${a.time}</div>
+      <div class="muted" style="font-size:12px">${sanitize(a.phone)}</div>
+    </div>`;
+    const actions = document.createElement('div');
+    const btn1 = document.createElement('button'); btn1.className='ghost'; btn1.textContent='Cancelar';
+    btn1.onclick = ()=>{ if(confirm('Cancelar esse agendamento?')){ cancelAppt(a.id); } };
+    const btn2 = document.createElement('button'); btn2.className='ghost'; btn2.style.marginTop='6px'; btn2.textContent='Baixar .ics';
+    btn2.onclick = ()=>{ downloadICS(a); };
+    actions.appendChild(btn1); actions.appendChild(btn2);
+    d.appendChild(actions);
+    apptsList.appendChild(d);
+  });
+}
+
+/* ====== Conflitos/Slots/Horários ====== */
+function isHoliday(iso){ return CONFIG.holidays.includes(iso); }
+function isSunday(date){ return new Date(date).getDay() === 0; }
+
+function getBusinessSlotsForDate(iso){
+  const d = new Date(iso);
+  const day = d.getDay();
+  const schedule = (day===6)? CONFIG.saturday : CONFIG.work; // 6 = sábado
+  if(!schedule || isHoliday(iso) || isSunday(iso)) return [];
+  return generateSlots(schedule.start, schedule.end, CONFIG.slotMinutes);
+}
+
+function generateSlots(start, end, minutes){
+  // start/end "HH:MM"
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  const slots = [];
+  let cur = new Date(0,0,0,sh,sm,0);
+  const until = new Date(0,0,0,eh,em,0);
+  while(cur < until){
+    const next = new Date(cur.getTime() + minutes*60000);
+    const s = cur.toTimeString().slice(0,5);
+    const e = next.toTimeString().slice(0,5);
+    slots.push(`${s} - ${e}`);
+    cur = next;
+  }
+  return slots;
+}
+
+function getTakenSlots(iso){
+  const list = loadAppts();
+  return list.filter(a=>a.dateISO===iso).map(a=>a.time);
+}
+function availableSlots(iso){
+  const all = getBusinessSlotsForDate(iso);
+  const taken = new Set(getTakenSlots(iso));
+  return all.filter(s=>!taken.has(s));
+}
+
+/* ====== Calendário .ics - CÓDIGO CORRIGIDO AQUI ====== */
+function escapeICSText(s){ return (s||'').replace(/[,;]/g,'\\$&'); }
+
+function downloadICS(a){
+  const startMoment = moment(a.dateISO + ' ' + a.time.split(' - ')[0], 'YYYY-MM-DD HH:mm');
+  const endMoment = moment(a.dateISO + ' ' + a.time.split(' - ')[1], 'YYYY-MM-DD HH:mm');
+  const nowMoment = moment();
+  const uid = a.id + '@clinic';
+  const text =
+`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Clínica Saúde+//EN
+BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${nowMoment.format('YYYYMMDDTHHmmss')}
+DTSTART:${startMoment.format('YYYYMMDDTHHmmss')}
+DTEND:${endMoment.format('YYYYMMDDTHHmmss')}
+SUMMARY:Consulta - ${escapeICSText(a.specialty)}
+DESCRIPTION:Agendamento para: ${escapeICSText(a.name)}\\nTipo: ${escapeICSText(a.specialty)}\\nContato: ${escapeICSText(a.phone)}
+END:VEVENT
+END:VCALENDAR`;
+  const blob = new Blob([text], {type:'text/calendar'});
+  const url = URL.createObjectURL(blob);
+  const ael = document.createElement('a'); ael.href = url; ael.download = `agendamento-${a.id}.ics`;
+  document.body.appendChild(ael); ael.click(); ael.remove();
+  URL.revokeObjectURL(url);
+}
+
+function downloadAllICS(list){
+  const nowMoment = moment();
+  const header = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Clínica Saúde+//EN\n`;
+  const vevents = list.map(a=>{
+    const startMoment = moment(a.dateISO + ' ' + a.time.split(' - ')[0], 'YYYY-MM-DD HH:mm');
+    const endMoment = moment(a.dateISO + ' ' + a.time.split(' - ')[1], 'YYYY-MM-DD HH:mm');
+    const uid = a.id + '@clinic';
+    return `BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${nowMoment.format('YYYYMMDDTHHmmss')}
+DTSTART:${startMoment.format('YYYYMMDDTHHmmss')}
+DTEND:${endMoment.format('YYYYMMDDTHHmmss')}
+SUMMARY:Consulta - ${escapeICSText(a.specialty)}
+DESCRIPTION:Agendamento para: ${escapeICSText(a.name)}\\nTipo: ${escapeICSText(a.specialty)}\\nContato: ${escapeICSText(a.phone)}
+END:VEVENT`;
+  }).join('\n');
+  const text = header + vevents + '\nEND:VCALENDAR';
+  const blob = new Blob([text], {type:'text/calendar'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='agendamentos-clinica.ics';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+/* FIM DO CÓDIGO CORRIGIDO */
+
+/* ====== Agendamento CRUD ====== */
+function confirmAndSave(){
+  const c = STATE.ctx;
+  const id = newId();
+  const item = { id, name:c.name, phone:c.phone, type:c.type, specialty:c.specialty, doctor:c.doctor || '', dateISO:c.dateISO, time:c.time, createdAt: new Date().toISOString() };
+  const list = loadAppts(); list.push(item); saveAppts(list);
+  
+  // Mensagem de confirmação estilizada
+  const details = `👤 ${c.name} | 📞 ${c.phone} | 🗓️ ${c.dateISO} às ${c.time.split(' - ')[0]} | 🩺 ${c.specialty}`;
+  respondWithDelay(`Agendamento realizado com sucesso ✅\n${details}`);
+
+  // fornecer .ics (download)
+  respondWithDelay('Você pode baixar o convite do calendário agora.');
+  downloadICS(item);
+  // agendar lembrete em 10 segundos (demo)
+  setTimeout(()=>{ respondWithDelay(`Lembrete automático: ${c.name}, sua ${c.specialty} é hoje ${c.dateISO} às ${c.time.split(' - ')[0]}. Confirmar presença?`); quickReplies([{label:'Confirmo', value:'reminder:confirm'}, {label:'Cancelar', value:'reminder:cancel'}]); STATE.step='reminder'; }, 10000);
+  resetContext();
+}
+
+function cancelAppt(id){
+  const list = loadAppts().filter(a=>a.id!==id);
+  saveAppts(list);
+  respondWithDelay('Agendamento cancelado.');
+}
+
+/* ====== Helpers Validacões ====== */
+function maskPhone(v){
+  const d = v.replace(/\D/g,'');
+  if(d.length<=10) return d.replace(/(\d{2})(\d{4})(\d{0,4})?/,'($1) $2-$3').replace(/-undefined/,'');
+  return d.replace(/(\d{2})(\d{5})(\d{0,4})?/,'($1) $2-$3').replace(/-undefined/,'');
+}
+function validPhone(s){
+  const d = (s||'').replace(/\D/g,'');
+  return d.length===10 || d.length===11;
+}
+
+/* ====== UX: quick replies ====== */
+function quickReplies(opts){
+  quick.innerHTML = '';
+  opts.forEach(o=>{
+    const b = document.createElement('button'); b.className='chip'; b.textContent=o.label;
+    b.onclick = ()=>{
+      // CÓDIGO NOVO: Efeito visual ao clicar
+      b.classList.add('clicked');
+      setTimeout(() => {
+        handleInput(o.value, true);
+      }, 300); // Pequeno atraso para a animação
+    };
+    quick.appendChild(b);
+  });
+}
+function clearQuick(){ quick.innerHTML=''; }
+
+/* ====== Flow do bot (estado) ====== */
+function start(){
+  STATE.step='menu'; resetContext();
+  log.innerHTML=''; respondWithDelay(greeting() + '\nBem-vindo ao atendimento digital da Clínica Saúde+.\nSou o Assistente — vamos começar?');
+  showMenu();
+  renderAppts();
+}
+function greeting(){ const h=new Date().getHours(); return (h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'); }
+function resetContext(){ STATE.ctx = { name:null, phone:null, type:null, specialty:null, doctor:null, dateISO:null, time:null }; clearQuick(); updatePlaceholder('Selecione uma opção...'); }
+
+function showMenu(){
+  STATE.step='menu'; STATE.awaiting=null;
+  quickReplies([
+    {label:'Agendar consulta', value:'agendar'},
+    {label:'Horário de atendimento', value:'horario'},
+    {label:'Falar com atendente', value:'humano'},
+    {label:'Listar agendamentos', value:'listar'}
+  ]);
+  updatePlaceholder('Selecione uma opção...');
+}
+
+/* ====== Processador de entradas ====== */
+function handleInput(text, isQuick=false){
+  if(!text) return;
+  if(!isQuick) addUser(text);
+  const t = (text||'').toString().trim();
+
+  // global commands
+  if(/^menu$/i.test(t)){ respondWithDelay('Voltando ao menu principal'); showMenu(); return; }
+  if(/^listar$/i.test(t)){ renderAppts(); respondWithDelay('Aqui estão seus agendamentos salvos.'); return; }
+  if(/^horari/i.test(t)){ respondWithDelay('Atendimento: segunda a sexta 09:00–19:00. Sábado 08:00–12:00. Domingos e feriados fechados.'); showMenu(); return; }
+  if(/^humano$/i.test(t) || t==='falar com atendente'){ startHandover(); return; }
+
+  // reminders
+  if(STATE.step==='reminder'){
+    if(/confirm/i.test(t) || /confirmo/i.test(t) || t==='reminder:confirm'){ respondWithDelay('Presença confirmada! Obrigado 🙏'); showMenu(); return; }
+    if(/cancel/i.test(t) || t==='reminder:cancel'){ respondWithDelay('Consulta cancelada. Vamos registrar e avisar a equipe.'); showMenu(); return; }
+  }
+
+  switch(STATE.step){
+    case 'menu':
+      if(/^agendar$/i.test(t) || t==='agendar'){ startScheduling(); } else { respondWithDelay('Desculpe, escolha uma opção do menu'); showMenu(); }
+      break;
+    case 'collect_name':
+      processName(t); break;
+    case 'collect_phone':
+      processPhone(t); break;
+    case 'collect_type':
+      processType(t); break;
+    case 'collect_specialty':
+      processSpecialty(t); break;
+    case 'select_doctor':
+      processDoctor(t); break;
+    case 'select_day':
+      processDay(t); break;
+    case 'select_time':
+      processTime(t); break;
+    case 'confirm':
+      if(/confirmar|sim|ok|confirm/i.test(t)){ confirmAndSave(); } else if(/refazer/i.test(t)){ startScheduling(); } else if(/cancelar|não/i.test(t)){ respondWithDelay('Agendamento cancelado. Posso ajudar em outra coisa?'); showMenu(); }
+      break;
+    case 'handover':
+      // collect message and return to menu
+      respondWithDelay('Mensagem registrada. Nossa equipe entrará em contato.'); showMenu(); break;
+    default:
+      respondWithDelay('Não entendi — retorne ao menu.'); showMenu(); break;
+  }
+}
+
+/* ====== Fluxo de agendamento ====== */
+function startScheduling(){
+  resetContext(); STATE.step='collect_name'; respondWithDelay('Ótimo! Para começar, qual é o seu nome completo?'); clearQuick(); updatePlaceholder('Digite seu nome completo...');
+}
+function processName(t){
+  const clean = t.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s'-]/g,'').trim();
+  if(clean.length < 2){ respondWithDelay('Por favor, informe seu nome (2+ caracteres).'); return; }
+  STATE.ctx.name = clean; respondWithDelay(`Prazer, ${clean}. Agora, qual o seu telefone com DDD? Ex: 11 91234-5678`); STATE.step='collect_phone'; updatePlaceholder('Digite seu telefone...');
+}
+function processPhone(t){
+  const masked = maskPhone(t);
+  if(!validPhone(t)){ respondWithDelay('Número inválido. Tente no formato: (11) 91234-5678'); return; }
+  STATE.ctx.phone = masked; respondWithDelay(`Obrigado! Vou usar ${masked}. O que deseja agendar? Consulta ou Exame?`); STATE.step='collect_type'; updatePlaceholder('Escolha uma opção...');
+  quickReplies([{label:'Consulta', value:'Consulta'},{label:'Exame', value:'Exame'}]);
+}
+function processType(t){
+  const v = t.toLowerCase();
+  if(!/(consulta|exame)/i.test(v)){ respondWithDelay('Escolha: Consulta ou Exame'); quickReplies([{label:'Consulta', value:'Consulta'},{label:'Exame', value:'Exame'}]); return; }
+  STATE.ctx.type = v.includes('exame') ? 'Exame' : 'Consulta';
+  STATE.step='collect_specialty';
+  // exemplo de especialidades - pode ser dinamizado
+  const specs = ['Clínica Geral','Ortopedia','Dermatologia','Cardiologia','Pediatria'];
+  respondWithDelay('Perfeito. Escolha a especialidade:');
+  quickReplies(specs.map(s=>({label:s, value:s})));
+  updatePlaceholder('Escolha uma especialidade...');
+}
+function processSpecialty(t){
+  STATE.ctx.specialty = t; // assume válido por quick-reply
+  // para algumas especialidades, sugerimos médicos
+  const doctors = doctorsBySpecialty(STATE.ctx.specialty);
+  if(doctors.length){
+    STATE.step='select_doctor'; respondWithDelay('Selecione um profissional:'); quickReplies(doctors.map(d=>({label:d, value:d})));
+    updatePlaceholder('Selecione um médico...');
+  } else {
+    STATE.step='select_day'; respondWithDelay('Ok. Escolha o dia para o atendimento:'); showDayOptions();
+    updatePlaceholder('Escolha um dia...');
+  }
+}
+
+function doctorsBySpecialty(spec){
+  const map = {
+    'Clínica Geral':['Dra. Ana Silva','Dr. João Souza'],
+    'Ortopedia':['Dr. Marcos Rocha'],
+    'Dermatologia':['Dra. Luiza Campos'],
+    'Cardiologia':['Dr. Pedro Andrade'],
+    'Pediatria':['Dra. Fernanda Lopes']
+  };
+  return map[spec] || [];
+}
+
+function processDoctor(t){
+  STATE.ctx.doctor = t;
+  STATE.step='select_day'; respondWithDelay(`Você escolheu ${t}. Agora, selecione o dia:`);
+  showDayOptions();
+  updatePlaceholder('Escolha um dia...');
+}
+
+function showDayOptions(){
+  clearQuick();
+  const days = nextBusinessDays(CONFIG.futureDays);
+  const opts = days.map(d=>({label:`${d.label} (${d.iso})`, value:d.iso}));
+  quickReplies(opts);
+}
+
+function nextBusinessDays(n){
+  const out=[]; const today = new Date();
+  for(let i=0; out.length<n && i<40; i++){
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()+i);
+    const iso = d.toISOString().slice(0,10);
+    if(isSunday(iso) || isHoliday(iso)) continue;
+    out.push({ iso, label: labelDate(d) });
+  }
+  return out;
+}
+function labelDate(d){ const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const days=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']; return `${days[d.getDay()]} ${dd}/${mm}`; }
+
+function processDay(t){
+  // t likely is ISO
+  const iso = t;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)){ respondWithDelay('Escolha um dia válido nas opções.'); return; }
+  if(isSunday(iso) || isHoliday(iso)){ respondWithDelay('Data indisponível (domingo/feriado). Escolha outra.'); showDayOptions(); return; }
+  STATE.ctx.dateISO = iso;
+  STATE.step='select_time';
+  respondWithDelay(`Data escolhida: ${iso}. Selecione horário disponível:`);
+  showTimeOptionsForDate(iso);
+  updatePlaceholder('Escolha um horário...');
+}
+
+function showTimeOptionsForDate(iso){
+  const slots = availableSlots(iso);
+  if(!slots.length){ respondWithDelay('Não há horários disponíveis nessa data. Escolha outro dia.'); showDayOptions(); return; }
+  quickReplies(slots.slice(0,40).map(s=>({label:s, value:s})));
+}
+
+function processTime(t){
+  STATE.ctx.time = t;
+  // confirmar se ainda livre (concorrência local)
+  const taken = getTakenSlots(STATE.ctx.dateISO);
+  if(taken.includes(t)){ respondWithDelay('Ops — horário já ocupado, escolha outro.'); showTimeOptionsForDate(STATE.ctx.dateISO); return; }
+  STATE.step='confirm';
+  respondWithDelay(`Confira: \nNome: ${STATE.ctx.name}\nContato: ${STATE.ctx.phone}\nTipo: ${STATE.ctx.specialty}\nData: ${STATE.ctx.dateISO} • ${STATE.ctx.time}\nConfirmar?`);
+  quickReplies([{label:'Confirmar ✅', value:'confirm'}, {label:'Refazer', value:'refazer'}, {label:'Cancelar', value:'cancel'}]);
+  updatePlaceholder('Digite "confirmar" ou escolha uma opção...');
+}
+
+/* ====== Handover (fila humana simulada) ====== */
+function startHandover(){
+  STATE.step='handover';
+  respondWithDelay('Vou transferir você para um atendente humano. Se não houver ninguém disponível, deixe uma mensagem e retornaremos.');
+  clearQuick();
+  quickReplies([{label:'Deixar mensagem', value:'mensagem'}, {label:'Voltar ao menu', value:'menu'}]);
+  updatePlaceholder('Deixe sua mensagem...');
+}
+joinQueueBtn.onclick = ()=>{
+  STATE.queue.push({time:new Date().toISOString()});
+  queueStatus.textContent = `Fila: ${STATE.queue.length} pessoas`;
+  respondWithDelay('Você entrou na fila de atendimento. Aguarde que um atendente iniciará conversa (simulado).');
+}
+
+/* ====== Cancelamento, Exportações ====== */
+resetBtn.onclick = ()=>{ if(confirm('Reiniciar conversa?')) start(); };
+exportAll.onclick = ()=>{
+  // exporta todos agendamentos como múltiplos .ics (zip seria ideal; aqui geramos único .ics com vários VEVENTS)
+  const list = loadAppts();
+  if(!list.length){ alert('Nenhum agendamento para exportar.'); return; }
+  downloadAllICS(list);
+};
+
+/* ====== Eventos do composer ====== */
+composer.addEventListener('submit', e=>{ e.preventDefault(); const t=input.value.trim(); if(!t) return; handleInput(t,false); input.value=''; input.focus(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') start(); });
+
+/* ====== Inicialização ====== */
+start();
+renderAppts();
+queueStatus.textContent = STATE.queue.length ? `Fila: ${STATE.queue.length} pessoas` : 'Nenhuma pessoa na fila';
+
+/* ====== Expor funções globais para debug (opcional) ====== */
+window._clinic = { loadAppts, saveAppts, start, availableSlots, CONFIG };
+</script>
+</body>
+</html>
